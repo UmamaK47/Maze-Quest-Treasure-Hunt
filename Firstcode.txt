@@ -1,0 +1,215 @@
+//#include <SFML/Graphics.hpp>
+//#include <SFML/Audio.hpp>
+//#include <sstream>
+//#include<chrono>
+//
+//using namespace sf;
+//
+//namespace gbl
+//{
+//    namespace CELL
+//    {
+//        constexpr unsigned char SIZE = 4;
+//
+//        namespace COLORS
+//        {
+//            const sf::Color GENERATION_PATH(0, 146, 255);
+//            const sf::Color DEFAULT(36, 36, 85);
+//            const sf::Color MAZE_PATH(255, 255, 255);
+//        }
+//    }
+//
+//    namespace MAP
+//    {
+//        //We're showing 4 mazes. This is the margin around them.
+//        constexpr unsigned char BORDER_OFFSET = 2;
+//        //How many times we run the algorithm per frame.
+//        constexpr unsigned char STEPS_PER_FRAME = 16;
+//
+//        constexpr unsigned short COLUMNS = 79;
+//        constexpr unsigned short ROWS = 40;
+//    }
+//
+//    namespace SCREEN
+//    {
+//        constexpr unsigned char RESIZE = 2;
+//
+//        constexpr unsigned short HEIGHT = 360;
+//        constexpr unsigned short WIDTH = 640;
+//
+//        //1 Second / 60 Frames = 16.667 ms per frame
+//        constexpr std::chrono::microseconds FRAME_DURATION(16667);
+//    }
+//
+//    template <typename i_value_type>
+//    using Vector2D = std::vector<std::vector<i_value_type>>;
+//}
+//
+//struct Edge {
+//    unsigned short x1, y1; // Coordinates of the first cell
+//    unsigned short x2, y2; // Coordinates of the second cell
+//
+//    Edge(unsigned short x1, unsigned short y1, unsigned short x2, unsigned short y2)
+//        : x1(x1), y1(y1), x2(x2), y2(y2) {}
+//};
+//
+//class Cell {
+//private:
+//    bool checked;
+//    bool wall_bottom;
+//    bool wall_top;
+//    bool wall_left;
+//    bool wall_right;
+//
+//    unsigned short x;
+//    unsigned short y;
+//
+//    Color color;
+//
+//public:
+//    Cell(const unsigned short& us_x, unsigned short& us_y) {
+//        checked = 0;
+//        wall_bottom = 1;
+//        wall_left = 1;
+//        wall_right = 1;
+//        wall_top = 1;
+//        x = us_x;
+//        y = us_y;
+//        color = gbl::CELL::COLORS::DEFAULT;
+//    }
+//    bool getChecked() const {
+//        return checked;
+//    }
+//    bool getWallBottom() const {
+//        return wall_bottom;
+//    }
+//    bool getWallTop() const {
+//        return wall_top;
+//    }
+//    bool getWallLeft() const {
+//        return wall_left;
+//    }
+//    bool getWallRight() const {
+//        return wall_right;
+//    }
+//    unsigned short get_x() const {
+//        return x;
+//    }
+//    unsigned short get_y() const {
+//        return y;
+//    }
+//    Color get_color() const {
+//        return color;
+//    }
+//
+//    void setChecked(const bool& value) {
+//        checked = value;
+//    }
+//    void setWallBottom(const bool& value) {
+//        wall_bottom = value;
+//    }
+//    void setWallTop(const bool& value) {
+//        wall_top = value;
+//    }
+//    void setWallLeft(const bool& value) {
+//        wall_left - value;
+//    }
+//    void setWallRight(const bool& value) {
+//        wall_right = value;
+//    }
+//    void set_color(const Color& value) {
+//        color = value;
+//    }
+//    void draw(RenderWindow& window, int cell_size) const {
+//        int gx = x * cell_size;
+//        int gy = y * cell_size;
+//
+//        // Draw the walls
+//        if (wall_top) {
+//            RectangleShape line(Vector2f(cell_size, 2));
+//            line.setFillColor(Color::White);
+//            line.setPosition(gx, gy);
+//            window.draw(line);
+//        }
+//        if (wall_bottom) {
+//            RectangleShape line(Vector2f(cell_size, 2));
+//            line.setFillColor(Color::White);
+//            line.setPosition(gx, gy + cell_size - 2);
+//            window.draw(line);
+//        }
+//        if (wall_left) {
+//            RectangleShape line(Vector2f(2, cell_size));
+//            line.setFillColor(Color::White);
+//            line.setPosition(gx, gy);
+//            window.draw(line);
+//        }
+//        if (wall_right) {
+//            RectangleShape line(Vector2f(2, cell_size));
+//            line.setFillColor(Color::White);
+//            line.setPosition(gx + cell_size - 2, gy);
+//            window.draw(line);
+//        }
+//    }
+//
+//};
+//
+//
+//
+//int main() {
+//    // Set up fullscreen window
+//   /* VideoMode vm(1920, 1080);
+//    RenderWindow window(vm, "MAZE!!!", Style::Fullscreen);*/
+//     VideoMode vm(960, 540);
+//     RenderWindow window(vm, "!!!!!!!!!!!!! MAZE !!!!!!!!!!!!!");
+//    View view(sf::FloatRect(0, 0, 1920, 1080));
+//    window.setView(view);
+//    window.setFramerateLimit(60);
+//
+//    //setting maze dimensions
+//    const int MAZE_COLUMNS = 20;  // Width of the maze (number of columns)
+//    const int MAZE_ROWS = 10;     // Height of the maze (number of rows)
+//    const int CELL_SIZE = 40;     // Size of each cell (in pixels)
+//
+//    Cell* maze[MAZE_COLUMNS][MAZE_ROWS];
+//
+//    for (unsigned short x = 0; x < MAZE_COLUMNS; x++) {
+//        for (unsigned short y = 0; y < MAZE_ROWS; y++) {
+//            maze[x][y] = new Cell(x, y);
+//        }
+//    }
+//
+//    // MAIN GAME LOOP STARTS HERE
+//    while (window.isOpen()) {
+//        Event event;
+//
+//        // Event handling loop
+//        while (window.pollEvent(event)) {
+//            if (event.type == Event::Closed) {
+//                window.close();
+//            }
+//        }
+//
+//        // Key handling (Escape key to close)
+//        if (Keyboard::isKeyPressed(Keyboard::Escape)) {
+//            window.close();
+//        }
+//
+//        // Clear the window and render everything
+//        window.clear();
+//        // You can add drawing here (e.g., maze, player, UI elements)
+//        for (int x = 0; x < MAZE_COLUMNS; x++) {
+//            for (int y = 0; y < MAZE_ROWS; y++) {
+//                maze[x][y]->draw(window, CELL_SIZE);
+//            }
+//        }
+//        window.display();  // Display the current frame
+//    }
+//    for (int x = 0; x < MAZE_COLUMNS; x++) {
+//        for (int y = 0; y < MAZE_ROWS; y++) {
+//            delete maze[x][y];
+//        }
+//    }
+//    return 0;
+//}
+
+
