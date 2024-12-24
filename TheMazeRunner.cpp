@@ -102,6 +102,76 @@ public:
     }
 
     
+    Node* getRandomVisitedNeighbor(Node* node) {
+        static const array<pair<int, int>, 4> directions = { {{-1, 0}, {1, 0}, {0, -1}, {0, 1}} };
+        Node* visitedNeighbors[4];
+        int count = 0;
+
+        for (auto& dir : directions) {
+            int nx = node->x + dir.first;
+            int ny = node->y + dir.second;
+            Node* neighbor = getNode(nx, ny);
+
+            if (neighbor && neighbor->visited) {
+                visitedNeighbors[count++] = neighbor;
+            }
+        }
+
+        if (count > 0) {
+            return visitedNeighbors[rand() % count];
+        }
+        return nullptr;
+    }
+
+    void draw_maze(RenderWindow& window, int cellSize, Vector2f offset, Node* current = nullptr, bool generationCompleted = false) {
+        window.clear(Color::Black);
+
+        for (auto& pair : nodes) {
+            Node* node = pair.second;
+
+            int x = offset.x + node->x * cellSize;
+            int y = offset.y + node->y * cellSize;
+
+            if (node->walls[0]) drawLine(window, x, y, x + cellSize, y);
+            if (node->walls[1]) drawLine(window, x + cellSize, y, x + cellSize, y + cellSize);
+            if (node->walls[2]) drawLine(window, x, y + cellSize, x + cellSize, y + cellSize);
+            if (node->walls[3]) drawLine(window, x, y, x, y + cellSize);
+
+            if (node->x == 0 && node->y == 0) {
+                Sprite sprite(entranceTexture);
+                sprite.setPosition(x, y);
+                sprite.setScale(cellSize / static_cast<float>(entranceTexture.getSize().x),
+                    cellSize / static_cast<float>(entranceTexture.getSize().y));
+                window.draw(sprite);
+            }
+
+            if (node->x == COLUMNS - 1 && node->y == ROWS - 1) {
+                Sprite sprite(exitTexture);
+                sprite.setPosition(x, y);
+                sprite.setScale(cellSize / static_cast<float>(exitTexture.getSize().x),
+                    cellSize / static_cast<float>(exitTexture.getSize().y));
+                window.draw(sprite);
+            }
+
+            if (node == current && !generationCompleted) {
+                Sprite sprite(visitedTexture);
+                sprite.setPosition(x, y);
+                sprite.setScale(cellSize / static_cast<float>(visitedTexture.getSize().x),
+                    cellSize / static_cast<float>(visitedTexture.getSize().y));
+                window.draw(sprite);
+            }
+        }
+
+        window.display();
+    }
+
+    void drawLine(RenderWindow& window, int x1, int y1, int x2, int y2) {
+        Vertex line[] = {
+            Vertex(Vector2f(x1, y1), Color::White),
+            Vertex(Vector2f(x2, y2), Color::White)
+        };
+        window.draw(line, 2, Lines);
+    }
 
    
 };
@@ -115,6 +185,17 @@ int main() {
     VideoMode vm(1920, 1080);
     RenderWindow window(vm, "THE MAZE RUNNER");
     window.setFramerateLimit(60);
+    
+    Vector2f offset((vm.width - COLUMNS * CELL_SIZE) / 2.0f, (vm.height - ROWS * CELL_SIZE) / 2.0f);
+
+    Graph graph(COLUMNS, ROWS);
+
+    Node* frontier[1000];
+    int frontierSize = 0;
+
+    Node* currentNode = graph.getNode(0, 0);
+    currentNode->visited = true;
+    graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
   
 //GAME LOOP STARTS HERE
     while (window.isOpen()) {
@@ -123,8 +204,24 @@ int main() {
             if (event.type == Event::Closed || Keyboard::isKeyPressed(Keyboard::Escape)) {
                 window.close();
             }
+            
         }
+        if (frontierSize > 0) {
+    int randIndex = rand() % frontierSize;
+    currentNode = frontier[randIndex];
+    frontier[randIndex] = frontier[--frontierSize];
+
+    Node* visitedNeighbor = graph.getRandomVisitedNeighbor(currentNode);
+    if (visitedNeighbor) {
+        graph.removeWalls(currentNode, visitedNeighbor);
+        currentNode->visited = true;
+        graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
     }
+}
+//drawing the maze on the console screen
+graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
+    }
+    
 
     return 0;
 }
