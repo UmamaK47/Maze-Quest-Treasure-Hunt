@@ -201,13 +201,19 @@ int main() {
      // Flags to track key press states
  bool upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
 
- SoundBuffer generating_maze_sound_buffer;
- generating_maze_sound_buffer.loadFromFile("D:/DSA/maze/Sounds/mazegenerating.wav.wav");
- Sound maze_sound;
- maze_sound.setBuffer(generating_maze_sound_buffer);
+ SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer;
+ Sound maze_sound, game_start_sound, treasure_collected_sound;
 
- // Playing sounds
- maze_sound.play();
+ generating_maze_sound_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/cool-sound.wav");
+ maze_sound.setBuffer(generating_maze_sound_buffer);
+ game_start_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/game-start.wav");
+ game_start_sound.setBuffer(game_start_buffer);
+ treasure_collected_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/achievement.wav");
+ treasure_collected_sound.setBuffer(treasure_collected_buffer);
+
+    //palying sounds by calling it
+      maze_sound.play();
+  game_start_sound.play();
     
 //GAME LOOP STARTS HERE
     while (window.isOpen()) {
