@@ -196,7 +196,19 @@ int main() {
     Node* currentNode = graph.getNode(0, 0);
     currentNode->visited = true;
     graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
-  
+    
+  //adding sound features 
+     // Flags to track key press states
+ bool upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
+
+ SoundBuffer generating_maze_sound_buffer;
+ generating_maze_sound_buffer.loadFromFile("D:/DSA/maze/Sounds/mazegenerating.wav.wav");
+ Sound maze_sound;
+ maze_sound.setBuffer(generating_maze_sound_buffer);
+
+ // Playing sounds
+ maze_sound.play();
+    
 //GAME LOOP STARTS HERE
     while (window.isOpen()) {
         Event event;
