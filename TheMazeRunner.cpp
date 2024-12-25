@@ -200,7 +200,53 @@ int main() {
   //adding sound features 
      // Flags to track key press states
  bool upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
+// adding the welcome box to display
 
+    // Load font
+    Font font;
+    if (!font.loadFromFile("D:/DSA/TheMazeRunner/Font/ArcadeClassic.ttf")) {
+        cerr << "Failed to load font" << endl;
+        return -1;
+    }
+
+    Text welcomeText, playAgainText, gameStartText;
+
+    // Create "Welcome" message
+
+    welcomeText.setFont(font);
+    welcomeText.setString("Welcome To The Maze Runner");
+    welcomeText.setCharacterSize(50);
+    welcomeText.setFillColor(Color::White);
+    welcomeText.setPosition(vm.width / 2 - welcomeText.getLocalBounds().width / 2,
+        vm.height / 2 - welcomeText.getLocalBounds().height / 2);
+
+    // Create rectangle box for "Welcome" text
+    RectangleShape welcomeBox(Vector2f(welcomeText.getLocalBounds().width + 40, welcomeText.getLocalBounds().height + 40));
+    welcomeBox.setFillColor(Color::Transparent);
+    welcomeBox.setOutlineColor(Color::Black);
+    welcomeBox.setOutlineThickness(2);
+    welcomeBox.setPosition(welcomeText.getPosition().x - 20, welcomeText.getPosition().y - 20);
+
+    // box for playing again message 
+
+// Create "Play Again?" message
+playAgainText.setFont(font);
+playAgainText.setString("Want  To  Play  Press  Enter  Otherwise  Press  Esacpe  Key");
+playAgainText.setCharacterSize(40);
+playAgainText.setFillColor(Color::Magenta);
+playAgainText.setPosition(vm.width / 2 - playAgainText.getLocalBounds().width / 2,
+    vm.height / 2 - playAgainText.getLocalBounds().height / 2);
+
+// Create a rectangle box around the "Play again?" text
+RectangleShape box(Vector2f(playAgainText.getLocalBounds().width + 40, playAgainText.getLocalBounds().height + 40));  // Increased padding
+box.setFillColor(Color::Transparent);
+box.setOutlineColor(Color::Black);
+box.setOutlineThickness(2);
+
+// Position the box with the adjusted padding
+box.setPosition(playAgainText.getPosition().x - 20, playAgainText.getPosition().y - 20);  // Adjusted position
+    
+    
  SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer;
  Sound maze_sound, game_start_sound, treasure_collected_sound;
 
@@ -211,9 +257,14 @@ int main() {
  treasure_collected_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/achievement.wav");
  treasure_collected_sound.setBuffer(treasure_collected_buffer);
 
-    //palying sounds by calling it
-      maze_sound.play();
-  game_start_sound.play();
+ bool gameStarted = false;
+ bool welcomeDisplayed = false;
+ float welcomeStartTime = 0.0f; // Time to display the welcome message
+ float gameStartTime = 0;  // Time the message will be displayed
+
+ bool gameCompleted = false;
+ maze_sound.play();
+ game_start_sound.play();
     
 //GAME LOOP STARTS HERE
     while (window.isOpen()) {
@@ -224,21 +275,104 @@ int main() {
             }
             
         }
-        if (frontierSize > 0) {
-    int randIndex = rand() % frontierSize;
-    currentNode = frontier[randIndex];
-    frontier[randIndex] = frontier[--frontierSize];
+        //welcome message shown
+        if (!welcomeDisplayed) {
+            welcomeStartTime += 1.0f / 60.0f;
+            if (welcomeStartTime >= 3.0f) {  // Display welcome message for 2 seconds
+                welcomeDisplayed = true;
+            }
 
-    Node* visitedNeighbor = graph.getRandomVisitedNeighbor(currentNode);
-    if (visitedNeighbor) {
-        graph.removeWalls(currentNode, visitedNeighbor);
-        currentNode->visited = true;
-        graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
-    }
+            window.clear();
+            window.draw(welcomeBox);
+            window.draw(welcomeText);
+            window.display();
+            continue;
+        }
+        if (!gameCompleted) {
+            if (frontierSize > 0) {
+                int randIndex = rand() % frontierSize;
+                currentNode = frontier[randIndex];
+                frontier[randIndex] = frontier[--frontierSize];
+
+                Node* visitedNeighbor = graph.getRandomVisitedNeighbor(currentNode);
+                if (visitedNeighbor) {
+                    graph.removeWalls(currentNode, visitedNeighbor);
+                    currentNode->visited = true;
+                    graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
+                }
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Up) && !upPressed) {
+                Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                if (current && !current->walls[0]) {
+                    playerPosition.y -= 1;
+                }
+                upPressed = true;
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Down) && !downPressed) {
+                Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                if (current && !current->walls[2]) {
+                    playerPosition.y += 1;
+                }
+                downPressed = true;
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Left) && !leftPressed) {
+                Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                if (current && !current->walls[3]) {
+                    playerPosition.x -= 1;
+                }
+                leftPressed = true;
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Right) && !rightPressed) {
+                Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                if (current && !current->walls[1]) {
+                    playerPosition.x += 1;
+                }
+                rightPressed = true;
+            }
+
+            if (playerPosition.x == COLUMNS - 1 && playerPosition.y == ROWS - 1) {
+                treasure_collected_sound.play();
+                gameCompleted = true;
+            }
+
+            graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
+            playerSprite.setPosition(
+                offset.x + playerPosition.x * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2,
+                offset.y + playerPosition.y * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2
+            );
+            window.draw(playerSprite);
+        }
+        else {
+            window.clear(Color::Black);
+
+            // Draw the rectangle box around the text
+            window.draw(box);
+
+            // Draw the "Play again?" text
+            window.draw(playAgainText);
+
+            if (Keyboard::isKeyPressed(Keyboard::Enter)) {
+                graph.reset();
+                frontierSize = 0;
+                currentNode = graph.getNode(0, 0);
+                currentNode->visited = true;
+                graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
+                playerPosition = Vector2i(0, 0);
+                gameCompleted = false;
+                maze_sound.play();
+            }
+
+            if (Keyboard::isKeyPressed(Keyboard::Escape)) {
+                window.close();
+            }
+        }
+
+            window.display();
 }
-//drawing the maze on the console screen
-graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
-    }
     
 
     return 0;
