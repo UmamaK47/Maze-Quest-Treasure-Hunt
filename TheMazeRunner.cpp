@@ -177,15 +177,14 @@ public:
 };
 
 int main() {
-  //DEFINING MAZE DIMENSIONS
     const int COLUMNS = 20;
     const int ROWS = 10;
     const int CELL_SIZE = 40;
-//SETTING CONSOLE SCREEN
+
     VideoMode vm(1920, 1080);
     RenderWindow window(vm, "THE MAZE RUNNER");
     window.setFramerateLimit(60);
-    
+
     Vector2f offset((vm.width - COLUMNS * CELL_SIZE) / 2.0f, (vm.height - ROWS * CELL_SIZE) / 2.0f);
 
     Graph graph(COLUMNS, ROWS);
@@ -196,11 +195,30 @@ int main() {
     Node* currentNode = graph.getNode(0, 0);
     currentNode->visited = true;
     graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
-    
-  //adding sound features 
-     // Flags to track key press states
- bool upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
-// adding the welcome box to display
+
+    Vector2i playerPosition(0, 0);
+    Texture playerTexture;
+    if (!playerTexture.loadFromFile("D:/DSA/TheMazeRunner/Graphics/idle/body/tile000.png")) {
+        cerr << "Failed to load player texture" << endl;
+        return -1;
+    }
+
+    Sprite playerSprite(playerTexture);
+    float scaleFactor = 2.5f;
+    playerSprite.setScale(
+        (CELL_SIZE * scaleFactor) / static_cast<float>(playerTexture.getSize().x),
+        (CELL_SIZE * scaleFactor) / static_cast<float>(playerTexture.getSize().y)
+    );
+
+    SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer;
+    Sound maze_sound, game_start_sound, treasure_collected_sound;
+
+    generating_maze_sound_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/cool-sound.wav");
+    maze_sound.setBuffer(generating_maze_sound_buffer);
+    game_start_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/game-start.wav");
+    game_start_sound.setBuffer(game_start_buffer);
+    treasure_collected_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/achievement.wav");
+    treasure_collected_sound.setBuffer(treasure_collected_buffer);
 
     // Load font
     Font font;
@@ -227,55 +245,67 @@ int main() {
     welcomeBox.setOutlineThickness(2);
     welcomeBox.setPosition(welcomeText.getPosition().x - 20, welcomeText.getPosition().y - 20);
 
-    // box for playing again message 
+    // Create "Game Starts" message
 
-// Create "Play Again?" message
-playAgainText.setFont(font);
-playAgainText.setString("Want  To  Play  Press  Enter  Otherwise  Press  Esacpe  Key");
-playAgainText.setCharacterSize(40);
-playAgainText.setFillColor(Color::Magenta);
-playAgainText.setPosition(vm.width / 2 - playAgainText.getLocalBounds().width / 2,
-    vm.height / 2 - playAgainText.getLocalBounds().height / 2);
+    gameStartText.setFont(font);
+    gameStartText.setString("Game Starts!");
+    gameStartText.setCharacterSize(50);
+    gameStartText.setFillColor(Color::White);
+    gameStartText.setPosition(vm.width / 2 - gameStartText.getLocalBounds().width/2,
+      vm.height / 2 - gameStartText.getLocalBounds().height/2); 
 
-// Create a rectangle box around the "Play again?" text
-RectangleShape box(Vector2f(playAgainText.getLocalBounds().width + 40, playAgainText.getLocalBounds().height + 40));  // Increased padding
-box.setFillColor(Color::Transparent);
-box.setOutlineColor(Color::Black);
-box.setOutlineThickness(2);
+    // Create rectangle box for "Game Starts" text
+    RectangleShape gameStartBox(Vector2f(gameStartText.getLocalBounds().width + 40, gameStartText.getLocalBounds().height + 40));
+    gameStartBox.setFillColor(Color::Transparent);
+    gameStartBox.setOutlineColor(Color::Black);
+    gameStartBox.setOutlineThickness(2);
+    gameStartBox.setPosition(gameStartText.getPosition().x - 20, gameStartText.getPosition().y - 20);
 
-// Position the box with the adjusted padding
-box.setPosition(playAgainText.getPosition().x - 20, playAgainText.getPosition().y - 20);  // Adjusted position
+
+	// Create "Play Again?" message
+    playAgainText.setFont(font);
+    playAgainText.setString("Want  To  Play  Press  Enter  Otherwise  Press  Esacpe  Key");
+    playAgainText.setCharacterSize(40);
+    playAgainText.setFillColor(Color::Magenta);
+    playAgainText.setPosition(vm.width / 2 - playAgainText.getLocalBounds().width / 2,
+        vm.height / 2 - playAgainText.getLocalBounds().height / 2);
+
+    // Create a rectangle box around the "Play again?" text
+    RectangleShape box(Vector2f(playAgainText.getLocalBounds().width + 40, playAgainText.getLocalBounds().height + 40));  // Increased padding
+    box.setFillColor(Color::Transparent);
+    box.setOutlineColor(Color::Black);
+    box.setOutlineThickness(2);
+
+    // Position the box with the adjusted padding
+    box.setPosition(playAgainText.getPosition().x - 20, playAgainText.getPosition().y - 20);  // Adjusted position
     
-    
- SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer;
- Sound maze_sound, game_start_sound, treasure_collected_sound;
+    bool gameStarted = false;
+    bool welcomeDisplayed = false;
+    float welcomeStartTime = 0.0f; // Time to display the welcome message
+    float gameStartTime = 0;  // Time the message will be displayed
 
- generating_maze_sound_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/cool-sound.wav");
- maze_sound.setBuffer(generating_maze_sound_buffer);
- game_start_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/game-start.wav");
- game_start_sound.setBuffer(game_start_buffer);
- treasure_collected_buffer.loadFromFile("D:/DSA/TheMazeRunner/Sounds/achievement.wav");
- treasure_collected_sound.setBuffer(treasure_collected_buffer);
+    bool gameCompleted = false;
+    maze_sound.play();
+    game_start_sound.play();
 
- bool gameStarted = false;
- bool welcomeDisplayed = false;
- float welcomeStartTime = 0.0f; // Time to display the welcome message
- float gameStartTime = 0;  // Time the message will be displayed
+    bool upPressed = false, downPressed = false, leftPressed = false, rightPressed = false;
 
- bool gameCompleted = false;
- maze_sound.play();
- game_start_sound.play();
-    
-//GAME LOOP STARTS HERE
+
     while (window.isOpen()) {
         Event event;
         while (window.pollEvent(event)) {
             if (event.type == Event::Closed || Keyboard::isKeyPressed(Keyboard::Escape)) {
                 window.close();
             }
-            
+
+            if (event.type == Event::KeyReleased) {
+                if (event.key.code == Keyboard::Up) upPressed = false;
+                if (event.key.code == Keyboard::Down) downPressed = false;
+                if (event.key.code == Keyboard::Left) leftPressed = false;
+                if (event.key.code == Keyboard::Right) rightPressed = false;
+            }
         }
-        //welcome message shown
+		//welcome message shown
         if (!welcomeDisplayed) {
             welcomeStartTime += 1.0f / 60.0f;
             if (welcomeStartTime >= 3.0f) {  // Display welcome message for 2 seconds
@@ -285,6 +315,21 @@ box.setPosition(playAgainText.getPosition().x - 20, playAgainText.getPosition().
             window.clear();
             window.draw(welcomeBox);
             window.draw(welcomeText);
+            window.display();
+            continue;
+        }
+
+
+        //game start message shown
+        if (!gameStarted) {
+            gameStartTime += 1.0f / 60.0f;
+            if (gameStartTime >= 2.0f) {  // Display for 3 seconds
+                gameStarted = true;
+            }
+
+            window.clear();
+            window.draw(gameStartBox);
+            window.draw(gameStartText);
             window.display();
             continue;
         }
@@ -371,9 +416,8 @@ box.setPosition(playAgainText.getPosition().x - 20, playAgainText.getPosition().
             }
         }
 
-            window.display();
-}
-    
+        window.display();
+    }
 
     return 0;
 }
