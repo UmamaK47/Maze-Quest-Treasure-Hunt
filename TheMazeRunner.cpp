@@ -193,7 +193,8 @@ int main() {
     GameState gameState = MAIN_MENU;
 
     stack<Vector2i> playerPath;
-    int reversalsRemaining = 0;
+    Text movesLeftText;
+    int movesLeft = 0;
 
     VideoMode vm(1920, 1080);
     RenderWindow window(vm, "THE MAZE RUNNER");
@@ -256,7 +257,6 @@ int main() {
 
     // MAIN MENU
     const int MENU_ITEMS = 3;
-    const int DIFFICULTY_ITEMS = 3;
     Text menu[MENU_ITEMS];
     string options[MENU_ITEMS] = { "Start Game", "How to Play", "Exit" };
     for (int i = 0; i < MENU_ITEMS; ++i) {
@@ -270,6 +270,7 @@ int main() {
     menu[selectedItem].setFillColor(Color::Red);
 
     //Difficulty selection menu setup
+    const int DIFFICULTY_ITEMS = 3;
     Text difficultyMenu[DIFFICULTY_ITEMS];
     string difficultyOptions[DIFFICULTY_ITEMS] = { "EASY", "MEDIUM", "DIFFICULT" };
     int selectedDifficulty = 0;
@@ -295,6 +296,12 @@ int main() {
     howToPlayText.setFillColor(Color::White);
     howToPlayText.setPosition(200, 200);
 
+    // Set up movesLeftText properties
+    movesLeftText.setFont(font);
+    movesLeftText.setCharacterSize(40);
+    movesLeftText.setFillColor(Color::White);
+    movesLeftText.setPosition(20, 20); // Top-left corner
+
     //Time Bar
     RectangleShape timeBar;
     float timeBarStartWidth = 400;
@@ -310,7 +317,7 @@ int main() {
     float timeRemaining = 30.0f;  // Start the game with 60 seconds
     float timeBarWidthPerSecond = timeBarStartWidth / timeRemaining;
 
-    
+    bool timeBarInitialized = false;
 
     Clock gameClock;  // SFML clock to track time
 
@@ -351,7 +358,7 @@ int main() {
                     }
                 }
             }
-            else if (gameState==DIFFICULTY_SELECTION) {
+            else if (gameState == DIFFICULTY_SELECTION) {
                 if (event.type == Event::KeyPressed) {
                     if (event.key.code == Keyboard::Up) {
                         difficultyMenu[selectedDifficulty].setFillColor(Color::White);
@@ -366,15 +373,15 @@ int main() {
                     else if (event.key.code == Keyboard::Enter) {
                         if (selectedDifficulty == 0) {
                             timeRemaining = 45.0f;
-                            reversalsRemaining = -1;
+                            movesLeft = 20;
                         }
                         else if (selectedDifficulty == 1) {
                             timeRemaining = 30.0f;
-                            reversalsRemaining = 10;
+                            movesLeft = 10;
                         }
                         else if (selectedDifficulty == 2) {
                             timeRemaining = 20.0f;
-                            reversalsRemaining = 5;
+                            movesLeft = 5;
                         }
 
                         gameState = START_GAME; // Proceed to the game
@@ -384,7 +391,7 @@ int main() {
                     }
                 }
             }
-            
+
             else if (gameState == HOW_TO_PLAY) {
                 if (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     gameState = MAIN_MENU;
@@ -407,7 +414,7 @@ int main() {
             for (int i = 0; i < DIFFICULTY_ITEMS; ++i) {
                 window.draw(difficultyMenu[i]);
             }
-        
+
         }
         else if (gameState == HOW_TO_PLAY) {
             window.clear();
@@ -439,6 +446,12 @@ int main() {
                     }
                 }
 
+                // Initialize time bar only once when the game starts
+                if (!timeBarInitialized) {
+                    timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight)); // Reset time bar size
+                    timeBarInitialized = true; // Set the flag to true to prevent re-initialization
+                }
+
                 // Check if time has run out
                 if (timeRemaining <= 0) {
                     gameCompleted = true;  // Mark game as completed
@@ -446,59 +459,125 @@ int main() {
                     treasure_collected_sound.stop(); // Ensure no treasure sound plays
                 }
 
-                // Movement logic
-                if (Keyboard::isKeyPressed(Keyboard::Up) && !upPressed) {
-                    Node* current = graph.getNode(playerPosition.x, playerPosition.y);
-                    if (current && !current->walls[0]) {
-                        playerPosition.y -= 1;
+                // Check if moves have reached 0 (out of moves)
+                if (movesLeft <= 0) {
+                    gameCompleted = true;
+                    Text outOfMovesText;
+                    outOfMovesText.setFont(font);
+                    outOfMovesText.setString("Out of moves! \nYou Died!\n\nPress Enter to Play Again\nPress ESC to go back to Main Menu");
+                    outOfMovesText.setCharacterSize(50);
+                    outOfMovesText.setFillColor(Color::Red);
+                    outOfMovesText.setPosition(1920 / 2 - outOfMovesText.getLocalBounds().width / 2, 1080 / 2 - outOfMovesText.getLocalBounds().height / 2);
+                    window.draw(outOfMovesText);
+                }
+                else {
+                    // Movement logic (same as you already have)
+                    bool moved = false;
+                    if (Keyboard::isKeyPressed(Keyboard::Up) && !upPressed) {
+                        Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                        if (current && !current->walls[0]) {
+                            if (playerPath.empty() || playerPath.top() != Vector2i(playerPosition.x, playerPosition.y - 1)) {
+                                playerPath.push(playerPosition);
+                            }
+                            else {
+                                if (movesLeft > 0) {
+                                    playerPath.pop();
+                                    movesLeft--;
+                                }
+                            }
+                            playerPosition.y -= 1;
+                            moved = true;
+                        }
+                        upPressed = true;
                     }
-                    upPressed = true;
-                }
 
-                if (Keyboard::isKeyPressed(Keyboard::Down) && !downPressed) {
-                    Node* current = graph.getNode(playerPosition.x, playerPosition.y);
-                    if (current && !current->walls[2]) {
-                        playerPosition.y += 1;
+                    if (Keyboard::isKeyPressed(Keyboard::Down) && !downPressed) {
+                        Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                        if (current && !current->walls[2]) {
+                            if (playerPath.empty() || playerPath.top() != Vector2i(playerPosition.x, playerPosition.y + 1)) {
+                                playerPath.push(playerPosition);
+                            }
+                            else {
+                                if (movesLeft > 0) {
+                                    playerPath.pop();
+                                    movesLeft--;
+                                }
+                            }
+                            playerPosition.y += 1;
+                            moved = true;
+                        }
+                        downPressed = true;
                     }
-                    downPressed = true;
-                }
 
-                if (Keyboard::isKeyPressed(Keyboard::Left) && !leftPressed) {
-                    Node* current = graph.getNode(playerPosition.x, playerPosition.y);
-                    if (current && !current->walls[3]) {
-                        playerPosition.x -= 1;
+                    if (Keyboard::isKeyPressed(Keyboard::Left) && !leftPressed) {
+                        Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                        if (current && !current->walls[3]) {
+                            if (playerPath.empty() || playerPath.top() != Vector2i(playerPosition.x - 1, playerPosition.y)) {
+                                playerPath.push(playerPosition);
+                            }
+                            else {
+                                if (movesLeft > 0) {
+                                    playerPath.pop();
+                                    movesLeft--;
+                                }
+                            }
+                            playerPosition.x -= 1;
+                            moved = true;
+                        }
+                        leftPressed = true;
                     }
-                    leftPressed = true;
-                }
 
-                if (Keyboard::isKeyPressed(Keyboard::Right) && !rightPressed) {
-                    Node* current = graph.getNode(playerPosition.x, playerPosition.y);
-                    if (current && !current->walls[1]) {
-                        playerPosition.x += 1;
+                    if (Keyboard::isKeyPressed(Keyboard::Right) && !rightPressed) {
+                        Node* current = graph.getNode(playerPosition.x, playerPosition.y);
+                        if (current && !current->walls[1]) {
+                            if (playerPath.empty() || playerPath.top() != Vector2i(playerPosition.x + 1, playerPosition.y)) {
+                                playerPath.push(playerPosition);
+                            }
+                            else {
+                                if (movesLeft > 0) {
+                                    playerPath.pop();
+                                    movesLeft--;
+                                }
+                            }
+                            playerPosition.x += 1;
+                            moved = true;
+                        }
+                        rightPressed = true;
                     }
-                    rightPressed = true;
-                }
 
-                // Check if player reaches the treasure
-                if (playerPosition.x == COLUMNS - 1 && playerPosition.y == ROWS - 1) {
-                    treasure_collected_sound.play();
-                    gameCompleted = true; // Set game to completed when treasure is reached
-                }
+                    // Check if player reaches the treasure
+                    if (movesLeft > 0 && playerPosition.x == COLUMNS - 1 && playerPosition.y == ROWS - 1) {
+                        treasure_collected_sound.play();
+                        gameCompleted = true; // Set game to completed when treasure is reached
+                    }
 
-                // Drawing the maze and player sprite
-                graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
-                playerSprite.setPosition(
-                    offset.x + playerPosition.x * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2,
-                    offset.y + playerPosition.y * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2
-                );
-                window.draw(playerSprite);
+                    movesLeftText.setString("Moves Left: " + std::to_string(movesLeft));
+
+                    // Drawing the maze and player sprite
+                    graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
+                    playerSprite.setPosition(
+                        offset.x + playerPosition.x * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2,
+                        offset.y + playerPosition.y * CELL_SIZE - (CELL_SIZE * (scaleFactor - 1)) / 2
+                    );
+                    window.draw(playerSprite);
+                    window.draw(movesLeftText);
+                }
             }
-           
             else {
-                if (timeRemaining <= 0) {
+                // Handle Game Over scenarios (either out of moves or out of time)
+                if (movesLeft <= 0) {
+                    Text outOfMovesText;
+                    outOfMovesText.setFont(font);
+                    outOfMovesText.setString("Out  of  moves! \nYou  Died!\n\nPress  Enter  to  Play  Again\nPress  ESC  to  go  back  to  Main  Menu");
+                    outOfMovesText.setCharacterSize(50);
+                    outOfMovesText.setFillColor(Color::Red);
+                    outOfMovesText.setPosition(1920 / 2 - outOfMovesText.getLocalBounds().width / 2, 1080 / 2 - outOfMovesText.getLocalBounds().height / 2);
+                    window.draw(outOfMovesText);
+                }
+                else if (timeRemaining <= 0) {
                     Text outOfTimeText;
                     outOfTimeText.setFont(font);
-                    outOfTimeText.setString("You Are Out of Time!!\nPress Enter to Play Again!\nPress ESC to go back to Main Menu");
+                    outOfTimeText.setString("You  Are  Out  of  Time!!\nYou Died!\n\nPress  Enter  to  Play  Again\nPress  ESC  to  go  back  to  Main  Menu");
                     outOfTimeText.setCharacterSize(50);
                     outOfTimeText.setFillColor(Color::Red);
                     outOfTimeText.setPosition(1920 / 2 - outOfTimeText.getLocalBounds().width / 2, 1080 / 2 - outOfTimeText.getLocalBounds().height / 2);
@@ -507,7 +586,7 @@ int main() {
                 else {
                     Text winText;
                     winText.setFont(font);
-                    winText.setString("Congratulations!!\nPress Enter to Play Again!\nPress ESC to go back to Main Menu");
+                    winText.setString("Congratulations!! You won!\n\nPress  Enter  to  Play  Again!\nPress  ESC  to  go  back  to  Main  Menu");
                     winText.setCharacterSize(50);
                     winText.setFillColor(Color::White);
                     winText.setPosition(1920 / 2 - winText.getLocalBounds().width / 2, 1080 / 2 - winText.getLocalBounds().height / 2);
@@ -516,6 +595,7 @@ int main() {
 
                 // Key input to restart or go back to main menu
                 if (Keyboard::isKeyPressed(Keyboard::Enter)) {
+                    // Reset game state
                     graph.reset();
                     frontierSize = 0;
                     currentNode = graph.getNode(0, 0);
@@ -523,16 +603,25 @@ int main() {
                     graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
                     playerPosition = Vector2i(0, 0);
                     gameCompleted = false;
+                    movesLeft = 20;  // Reset moves
                     timeRemaining = 30.0f; // Reset time
-                    timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight)); // Reset the time bar to its original width
+
+                    if (!timeBarInitialized) {
+                        // Initialize the time bar only once when the game starts or restarts
+                        timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight)); // Reset time bar size
+                        timeBarInitialized = true; // Set flag to true to avoid re-initialization
+                    }
+
                     maze_sound.play();
                     timerStarted = false; // Reset the timer start flag
+                    gameState = DIFFICULTY_SELECTION;
                 }
 
                 if (Keyboard::isKeyPressed(Keyboard::Escape)) {
                     gameState = MAIN_MENU;
                 }
             }
+
             // Update time only if the timer has started
             if (mazeGenerated && timerStarted) {
                 float deltaTime = gameClock.restart().asSeconds();
@@ -540,16 +629,19 @@ int main() {
 
                 if (timeRemaining < 0) timeRemaining = 0;  // Clamp time to zero
 
-                timeBar.setSize(Vector2f(timeBarStartWidth * (timeRemaining / 30.0f), timeBarHeight)); // Update time bar
+                timeBar.setSize(Vector2f(timeBarStartWidth * (timeRemaining / 30.0f), timeBarHeight)); // Update time bar size
             }
 
+            // Draw the time bar after updating it
             window.draw(timeBar);
-}
+        }
+
+
+
         window.display();
     }
 
     return 0;
 }
-
 
 
