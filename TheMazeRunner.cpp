@@ -37,9 +37,6 @@ public:
         }
 
         // Load textures
-        if (!entranceTexture.loadFromFile("D:/TheMazeRunner/Graphics/idle/body/tile000.png")) {
-            cerr << "Failed to load entrance texture" << endl;
-        }
         if (!exitTexture.loadFromFile("D:/TheMazeRunner/Graphics/treasure.png")) {
             cerr << "Failed to load exit texture" << endl;
         }
@@ -212,7 +209,7 @@ int main() {
     graph.addNeighborsToFrontier(currentNode, frontier, frontierSize);
 
     Vector2i playerPosition(0, 0);
-    Texture playerTexture;
+    Texture playerTexture;  //load player
     if (!playerTexture.loadFromFile("D:/TheMazeRunner/Graphics/idle/body/tile000.png")) {
         cerr << "Failed to load player texture" << endl;
         return -1;
@@ -225,8 +222,9 @@ int main() {
         (CELL_SIZE * scaleFactor) / static_cast<float>(playerTexture.getSize().y)
     );
 
-    SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer;
-    Sound maze_sound, game_start_sound, treasure_collected_sound;
+    //Sound set up
+    SoundBuffer generating_maze_sound_buffer, game_start_buffer, treasure_collected_buffer, timeout_buffer;
+    Sound maze_sound, game_start_sound, treasure_collected_sound, timeout_sound;
 
     generating_maze_sound_buffer.loadFromFile("D:/TheMazeRunner/Sound/mazegenerating.wav");
     maze_sound.setBuffer(generating_maze_sound_buffer);
@@ -234,6 +232,8 @@ int main() {
     game_start_sound.setBuffer(game_start_buffer);
     treasure_collected_buffer.loadFromFile("D:/TheMazeRunner/Sound/achievement.wav");
     treasure_collected_sound.setBuffer(treasure_collected_buffer);
+    timeout_buffer.loadFromFile("D:/TheMazeRunner/Sound/out_of_time.wav");
+    timeout_sound.setBuffer(timeout_buffer);
 
     // Load font
     Font font;
@@ -250,6 +250,7 @@ int main() {
     float gameStartTime = 0;  // Time the message will be displayed
 
     bool gameCompleted = false;
+    maze_sound.setLoop(true);
     maze_sound.play();
     game_start_sound.play();
 
@@ -318,13 +319,15 @@ int main() {
     float timeBarWidthPerSecond = timeBarStartWidth / timeRemaining;
 
     bool timeBarInitialized = false;
+    bool outOfMovesSoundPlayed = false;
+    bool outOfTimeSoundPlayed = false;
 
     Clock gameClock;  // SFML clock to track time
 
     while (window.isOpen()) {
         Event event;
         while (window.pollEvent(event)) {
-            if (event.type == Event::Closed /* || Keyboard::isKeyPressed(Keyboard::Escape)*/) {
+            if (event.type == Event::Closed) {
                 window.close();
             }
 
@@ -349,7 +352,6 @@ int main() {
                     }
                     else if (event.key.code == Keyboard::Enter) {
                         if (selectedItem == 0)
-                            //gameState = START_GAME;
                             gameState = DIFFICULTY_SELECTION;
                         else if (selectedItem == 1)
                             gameState = HOW_TO_PLAY;
@@ -358,7 +360,7 @@ int main() {
                     }
                 }
             }
-            else if (gameState == DIFFICULTY_SELECTION) {
+            else if (gameState==DIFFICULTY_SELECTION) {
                 if (event.type == Event::KeyPressed) {
                     if (event.key.code == Keyboard::Up) {
                         difficultyMenu[selectedDifficulty].setFillColor(Color::White);
@@ -373,7 +375,7 @@ int main() {
                     else if (event.key.code == Keyboard::Enter) {
                         if (selectedDifficulty == 0) {
                             timeRemaining = 45.0f;
-                            movesLeft = 20;
+                            movesLeft =20;
                         }
                         else if (selectedDifficulty == 1) {
                             timeRemaining = 30.0f;
@@ -391,14 +393,13 @@ int main() {
                     }
                 }
             }
-
+            
             else if (gameState == HOW_TO_PLAY) {
                 if (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     gameState = MAIN_MENU;
                 }
             }
             else if (gameState == START_GAME) {
-                // Placeholder for maze game logic
                 if (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     gameState = MAIN_MENU;
                 }
@@ -414,7 +415,7 @@ int main() {
             for (int i = 0; i < DIFFICULTY_ITEMS; ++i) {
                 window.draw(difficultyMenu[i]);
             }
-
+        
         }
         else if (gameState == HOW_TO_PLAY) {
             window.clear();
@@ -471,7 +472,7 @@ int main() {
                     window.draw(outOfMovesText);
                 }
                 else {
-                    // Movement logic (same as you already have)
+                    // Movement logic 
                     bool moved = false;
                     if (Keyboard::isKeyPressed(Keyboard::Up) && !upPressed) {
                         Node* current = graph.getNode(playerPosition.x, playerPosition.y);
@@ -551,7 +552,7 @@ int main() {
                         gameCompleted = true; // Set game to completed when treasure is reached
                     }
 
-                    movesLeftText.setString("Moves Left: " + std::to_string(movesLeft));
+                    movesLeftText.setString("Moves  Left=  " + std::to_string(movesLeft));
 
                     // Drawing the maze and player sprite
                     graph.draw_maze(window, CELL_SIZE, offset, currentNode, frontierSize == 0);
@@ -566,6 +567,10 @@ int main() {
             else {
                 // Handle Game Over scenarios (either out of moves or out of time)
                 if (movesLeft <= 0) {
+                    if (!outOfMovesSoundPlayed) {
+                        timeout_sound.play();
+                        outOfMovesSoundPlayed = true; // Set the flag so the sound only plays once
+                    }
                     Text outOfMovesText;
                     outOfMovesText.setFont(font);
                     outOfMovesText.setString("Out  of  moves! \nYou  Died!\n\nPress  Enter  to  Play  Again\nPress  ESC  to  go  back  to  Main  Menu");
@@ -575,6 +580,10 @@ int main() {
                     window.draw(outOfMovesText);
                 }
                 else if (timeRemaining <= 0) {
+                    if (!outOfTimeSoundPlayed) {
+                        timeout_sound.play();
+                        outOfTimeSoundPlayed = true; // Set the flag so the sound only plays once
+                    }
                     Text outOfTimeText;
                     outOfTimeText.setFont(font);
                     outOfTimeText.setString("You  Are  Out  of  Time!!\nYou Died!\n\nPress  Enter  to  Play  Again\nPress  ESC  to  go  back  to  Main  Menu");
@@ -605,7 +614,8 @@ int main() {
                     gameCompleted = false;
                     movesLeft = 20;  // Reset moves
                     timeRemaining = 30.0f; // Reset time
-
+                    outOfMovesSoundPlayed = false;
+                    outOfTimeSoundPlayed = false;
                     if (!timeBarInitialized) {
                         // Initialize the time bar only once when the game starts or restarts
                         timeBar.setSize(Vector2f(timeBarStartWidth, timeBarHeight)); // Reset time bar size
@@ -635,13 +645,11 @@ int main() {
             // Draw the time bar after updating it
             window.draw(timeBar);
         }
-
-
-
         window.display();
     }
 
     return 0;
 }
+
 
 
