@@ -5,11 +5,12 @@
 #include <map>
 #include <array>
 #include <iostream>
+#include<stack>
 
 using namespace sf;
 using namespace std;
 
-enum GameState { MAIN_MENU, HOW_TO_PLAY, START_GAME, EXIT };
+enum GameState { MAIN_MENU, HOW_TO_PLAY, START_GAME, EXIT, DIFFICULTY_SELECTION};
 
 struct Node {
     int x, y;
@@ -191,6 +192,9 @@ int main() {
 
     GameState gameState = MAIN_MENU;
 
+    stack<Vector2i> playerPath;
+    int reversalsRemaining = 0;
+
     VideoMode vm(1920, 1080);
     RenderWindow window(vm, "THE MAZE RUNNER");
     window.setFramerateLimit(60);
@@ -252,6 +256,7 @@ int main() {
 
     // MAIN MENU
     const int MENU_ITEMS = 3;
+    const int DIFFICULTY_ITEMS = 3;
     Text menu[MENU_ITEMS];
     string options[MENU_ITEMS] = { "Start Game", "How to Play", "Exit" };
     for (int i = 0; i < MENU_ITEMS; ++i) {
@@ -263,6 +268,20 @@ int main() {
     }
     int selectedItem = 0;
     menu[selectedItem].setFillColor(Color::Red);
+
+    //Difficulty selection menu setup
+    Text difficultyMenu[DIFFICULTY_ITEMS];
+    string difficultyOptions[DIFFICULTY_ITEMS] = { "EASY", "MEDIUM", "DIFFICULT" };
+    int selectedDifficulty = 0;
+
+    for (int i = 0; i < DIFFICULTY_ITEMS; ++i) {
+        difficultyMenu[i].setFont(font);
+        difficultyMenu[i].setString(difficultyOptions[i]);
+        difficultyMenu[i].setCharacterSize(50);
+        difficultyMenu[i].setFillColor(Color::White);
+        difficultyMenu[i].setPosition(300, 200 + i * 70);
+    }
+    difficultyMenu[selectedDifficulty].setFillColor(Color::Red);
 
     // "How to Play" setup
     Text howToPlayText;
@@ -323,7 +342,8 @@ int main() {
                     }
                     else if (event.key.code == Keyboard::Enter) {
                         if (selectedItem == 0)
-                            gameState = START_GAME;
+                            //gameState = START_GAME;
+                            gameState = DIFFICULTY_SELECTION;
                         else if (selectedItem == 1)
                             gameState = HOW_TO_PLAY;
                         else if (selectedItem == 2)
@@ -331,6 +351,40 @@ int main() {
                     }
                 }
             }
+            else if (gameState==DIFFICULTY_SELECTION) {
+                if (event.type == Event::KeyPressed) {
+                    if (event.key.code == Keyboard::Up) {
+                        difficultyMenu[selectedDifficulty].setFillColor(Color::White);
+                        selectedDifficulty = (selectedDifficulty - 1 + DIFFICULTY_ITEMS) % DIFFICULTY_ITEMS;
+                        difficultyMenu[selectedDifficulty].setFillColor(Color::Red);
+                    }
+                    else if (event.key.code == Keyboard::Down) {
+                        difficultyMenu[selectedDifficulty].setFillColor(Color::White);
+                        selectedDifficulty = (selectedDifficulty + 1) % DIFFICULTY_ITEMS;
+                        difficultyMenu[selectedDifficulty].setFillColor(Color::Red);
+                    }
+                    else if (event.key.code == Keyboard::Enter) {
+                        if (selectedDifficulty == 0) {
+                            timeRemaining = 45.0f;
+                            reversalsRemaining = -1;
+                        }
+                        else if (selectedDifficulty == 1) {
+                            timeRemaining = 30.0f;
+                            reversalsRemaining = 10;
+                        }
+                        else if (selectedDifficulty == 2) {
+                            timeRemaining = 20.0f;
+                            reversalsRemaining = 5;
+                        }
+
+                        gameState = START_GAME; // Proceed to the game
+                    }
+                    else if (event.key.code == Keyboard::Escape) {
+                        gameState = MAIN_MENU; // Return to main menu
+                    }
+                }
+            }
+            
             else if (gameState == HOW_TO_PLAY) {
                 if (event.type == Event::KeyPressed && event.key.code == Keyboard::Escape) {
                     gameState = MAIN_MENU;
@@ -348,6 +402,12 @@ int main() {
             for (int i = 0; i < MENU_ITEMS; ++i) {
                 window.draw(menu[i]);
             }
+        }
+        else if (gameState == DIFFICULTY_SELECTION) {
+            for (int i = 0; i < DIFFICULTY_ITEMS; ++i) {
+                window.draw(difficultyMenu[i]);
+            }
+        
         }
         else if (gameState == HOW_TO_PLAY) {
             window.clear();
