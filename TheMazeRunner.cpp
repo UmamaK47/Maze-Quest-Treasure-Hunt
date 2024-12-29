@@ -194,7 +194,7 @@ int main() {
     int movesLeft = 0;
 
     VideoMode vm(1920, 1080);
-    RenderWindow window(vm, "THE MAZE RUNNER");
+     RenderWindow window(vm, "Maze Quest: Treasure Hunt");
     window.setFramerateLimit(60);
 
     Vector2f offset((vm.width - COLUMNS * CELL_SIZE) / 2.0f, (vm.height - ROWS * CELL_SIZE) / 2.0f);
