@@ -232,7 +232,7 @@ int main() {
     game_start_sound.setBuffer(game_start_buffer);
     treasure_collected_buffer.loadFromFile("D:/TheMazeRunner/Sound/achievement.wav");
     treasure_collected_sound.setBuffer(treasure_collected_buffer);
-    timeout_buffer.loadFromFile("D:/TheMazeRunner/Sound/out_of_time.wav");
+    timeout_buffer.loadFromFile("D:/TheMazeRunner/Sound/gameOver.wav.wav");
     timeout_sound.setBuffer(timeout_buffer);
 
     // Load font
